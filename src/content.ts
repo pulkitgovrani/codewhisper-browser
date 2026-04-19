@@ -58,6 +58,71 @@ function gatherPageContext(
   };
 }
 
+function contextModeShortLabel(mode: ContextMode): string {
+  return mode === "selectionParagraph"
+    ? "Whole block around highlight"
+    : "Highlighted text only";
+}
+
+/** Updates the “what we’re sending” preview from the live page selection. */
+function renderContextPreview(
+  shadow: ShadowRoot,
+  mode: ContextMode,
+  maxChars: number
+): void {
+  const ctx = gatherPageContext(mode, maxChars);
+  const badge = shadow.getElementById("pw-mode-badge");
+  const meta = shadow.getElementById("pw-context-meta");
+  const snippet = shadow.getElementById("pw-snippet");
+  const snippetLabel = shadow.getElementById("pw-snippet-label");
+  const card = shadow.getElementById("pw-context-card");
+  const warn = shadow.getElementById("pw-warn");
+
+  if (badge) badge.textContent = contextModeShortLabel(mode);
+
+  const titleShort =
+    ctx.pageTitle.trim().slice(0, 72) + (ctx.pageTitle.length > 72 ? "…" : "");
+
+  if (meta) {
+    if (ctx.contextChars === 0) {
+      meta.textContent = `Tab: “${titleShort || "Untitled"}” · No passage captured yet.`;
+    } else {
+      meta.textContent = `Tab: “${titleShort || "Untitled"}” · Sending ${ctx.contextChars.toLocaleString()} of ${maxChars.toLocaleString()} characters${ctx.truncated ? " (cut at your max)" : ""}.`;
+    }
+  }
+
+  if (snippetLabel) {
+    snippetLabel.hidden = ctx.contextChars === 0;
+  }
+
+  if (snippet) {
+    const body = ctx.contextBody.replace(/\s+/g, " ").trim();
+    if (!body) {
+      snippet.hidden = true;
+      snippet.textContent = "";
+    } else {
+      snippet.hidden = false;
+      const limit = 320;
+      snippet.textContent =
+        body.length > limit ? `${body.slice(0, limit).trimEnd()}…` : body;
+    }
+  }
+
+  if (card) {
+    card.classList.toggle("context-empty", ctx.contextChars === 0);
+  }
+
+  if (warn) {
+    if (ctx.contextChars === 0) {
+      warn.hidden = false;
+      warn.textContent =
+        "Nothing highlighted — answers won’t use page text (fine for random questions). Drag to select a quote or paragraph first for grounded answers.";
+    } else {
+      warn.hidden = true;
+    }
+  }
+}
+
 function removePanel(): void {
   revokePlayback();
   document.getElementById(PANEL_HOST_ID)?.remove();
@@ -227,21 +292,129 @@ function openPanel(): void {
 <style>
   * { box-sizing: border-box; }
   .card {
-    width: min(400px, calc(100vw - 32px));
-    max-height: min(540px, calc(100vh - 32px));
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(580px, calc(100vh - 32px));
     overflow: auto;
-    background: #0f0f13;
+    background: linear-gradient(160deg, #14141a 0%, #0c0c10 100%);
     color: #f4f4f5;
-    border: 1px solid #2a2a35;
-    border-radius: 16px;
-    box-shadow: 0 16px 48px rgba(0,0,0,.6);
-    padding: 16px 18px;
+    border: 1px solid #31313d;
+    border-radius: 18px;
+    box-shadow: 0 20px 56px rgba(0,0,0,.65), 0 0 0 1px rgba(99,102,241,.12);
+    padding: 14px 16px 16px;
   }
-  h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
-  .muted { color: #a1a1aa; font-size: 12px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
-  .warn { color: #fbbf24; font-size: 12px; margin-bottom: 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-  button {
+  .head-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .mascot {
+    font-size: 34px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(99,102,241,.35));
+    user-select: none;
+  }
+  .brand-text { flex: 1; min-width: 0; }
+  .title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+    background: linear-gradient(90deg, #e4e4e7, #a5b4fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #a1a1aa;
+    margin: 0;
+  }
+  .context-card {
+    background: rgba(24,24,27,.85);
+    border: 1px solid #3f3f46;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .context-card.context-empty {
+    border-color: rgba(251,191,36,.35);
+    background: rgba(39,39,42,.65);
+  }
+  .context-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .context-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #71717a;
+  }
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #c7d2fe;
+    background: rgba(99,102,241,.18);
+    border: 1px solid rgba(99,102,241,.35);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  #pw-context-meta {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #d4d4d8;
+    margin: 0 0 6px;
+    word-break: break-word;
+  }
+  #pw-snippet-label {
+    font-size: 11px;
+    color: #71717a;
+    margin: 0 0 4px;
+  }
+  #pw-snippet {
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 3px solid #6366f1;
+    background: rgba(9,9,11,.55);
+    border-radius: 0 8px 8px 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #e4e4e7;
+    max-height: 112px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .refresh-ctx {
+    margin-top: 8px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #a5b4fc;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .refresh-ctx:hover { color: #c7d2fe; }
+  .muted { color: #a1a1aa; font-size: 12px; line-height: 1.4; word-break: break-word; }
+  .warn {
+    color: #fde68a;
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(251,191,36,.08);
+    border: 1px solid rgba(251,191,36,.2);
+  }
+  button.btn {
     background: #3f3f46;
     color: #fafafa;
     border: none;
@@ -249,24 +422,22 @@ function openPanel(): void {
     padding: 8px 12px;
     cursor: pointer;
     font-size: 13px;
-    transition: background 0.15s;
+    transition: background 0.15s, transform 0.1s;
   }
-  button:hover { background: #52525b; }
+  button.btn:hover { background: #52525b; }
+  button.btn:active { transform: scale(0.98); }
   button.primary { background: #6366f1; }
   button.primary:hover { background: #4f46e5; }
-  button.danger { background: #dc2626; color: #fff; }
-  button.danger:hover { background: #b91c1c; }
   #pw-mic {
     width: 100%;
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    letter-spacing: 0.01em;
   }
   #pw-mic.recording {
     background: #dc2626;
@@ -281,18 +452,19 @@ function openPanel(): void {
   .ask-row { display: flex; gap: 8px; }
   textarea {
     width: 100%;
-    min-height: 56px;
-    border-radius: 8px;
+    min-height: 60px;
+    border-radius: 10px;
     border: 1px solid #3f3f46;
     background: #18181b;
     color: #fafafa;
-    padding: 8px;
+    padding: 10px 10px;
     font: inherit;
     resize: vertical;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     transition: border-color 0.15s;
   }
-  textarea:focus { outline: none; border-color: #6366f1; }
+  textarea:focus { outline: none; border-color: #818cf8; }
+  .hint { font-size: 11px; color: #71717a; margin: 0 0 8px; }
   .out {
     font-size: 13px;
     line-height: 1.55;
@@ -301,10 +473,9 @@ function openPanel(): void {
     border-top: 1px solid #2a2a35;
   }
   .transcript-line {
-    color: #71717a;
+    color: #a1a1aa;
     font-size: 11px;
     margin-bottom: 8px;
-    font-style: italic;
   }
   .answer-block {
     color: #f4f4f5;
@@ -313,48 +484,48 @@ function openPanel(): void {
     white-space: pre-wrap;
     word-break: break-word;
   }
-  .answer-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #71717a; margin-bottom: 4px; }
-  .x { margin-left: auto; background: transparent; color: #a1a1aa; font-size: 18px; line-height: 1; padding: 4px 8px; }
-  .dots::after {
-    content: '';
-    animation: dots 1.2s steps(3, end) infinite;
-  }
-  @keyframes dots {
-    0%   { content: '.'; }
-    33%  { content: '..'; }
-    66%  { content: '...'; }
-    100% { content: ''; }
-  }
+  .answer-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #71717a; margin-bottom: 6px; }
+  .x { margin-left: auto; background: transparent; color: #a1a1aa; font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: 8px; }
+  .x:hover { color: #fafafa; background: rgba(63,63,70,.5); }
 </style>
 <div class="card">
-  <div style="display:flex;align-items:flex-start;gap:8px">
-    <h2>CodeWhisper</h2>
-    <button class="x" type="button" id="pw-close" aria-label="Close">×</button>
+  <div class="head-row">
+    <span class="mascot" title="Sidney, your page-reading octopus">🐙</span>
+    <div class="brand-text">
+      <h2 class="title">PageWhisper</h2>
+      <p class="tagline">Sidney read the tab so you don’t have to pretend you did.</p>
+    </div>
+    <button class="x" type="button" id="pw-close" aria-label="Close panel">×</button>
   </div>
-  <div class="muted" id="pw-preview"></div>
+  <div id="pw-context-card" class="context-card">
+    <div class="context-top">
+      <span class="context-kicker">Context for Groq</span>
+      <span class="badge" id="pw-mode-badge"></span>
+    </div>
+    <p id="pw-context-meta"></p>
+    <p id="pw-snippet-label" hidden>Preview of what we send:</p>
+    <blockquote id="pw-snippet" hidden></blockquote>
+    <button type="button" class="refresh-ctx" id="pw-refresh-ctx">↻ Refresh from page</button>
+  </div>
   <div class="warn" id="pw-warn" hidden></div>
   <div class="mic-row">
-    <button type="button" class="primary" id="pw-mic">🎙 Ask with voice</button>
+    <button type="button" class="btn primary" id="pw-mic">🎙 Roast this page (voice)</button>
   </div>
-  <div class="label">Or type your question</div>
-  <textarea id="pw-q" placeholder="e.g. What does this do?"></textarea>
+  <div class="label">Or type</div>
+  <textarea id="pw-q" placeholder="What’s this paragraph trying to say? Why should I care?"></textarea>
+  <p class="hint">⌘/Ctrl + Enter to send · Change “context mode” in extension options</p>
   <div class="ask-row">
-    <button type="button" id="pw-typed-send" style="flex:1">Ask</button>
+    <button type="button" class="btn primary" id="pw-typed-send" style="flex:1">Ask Sidney</button>
   </div>
-  <div id="pw-status" class="muted" style="margin-top:8px"></div>
+  <div id="pw-status" class="muted" style="margin-top:8px;min-height:1.2em"></div>
   <div class="out" id="pw-out" hidden>
     <div class="transcript-line" id="pw-transcript"></div>
     <div class="answer-block" id="pw-answer"></div>
     <div class="answer-actions" id="pw-answer-actions" hidden>
-      <button type="button" class="primary" id="pw-play">▶ Play</button>
-      <button type="button" id="pw-copy">Copy</button>
-      <button type="button" id="pw-replay" hidden>↺ Replay</button>
+      <button type="button" class="btn primary" id="pw-play">▶ Play</button>
+      <button type="button" class="btn" id="pw-copy">Copy</button>
+      <button type="button" class="btn" id="pw-replay" hidden>↺ Replay</button>
     </div>
   </div>
 </div>`;
@@ -363,19 +534,11 @@ function openPanel(): void {
   void chrome.runtime.sendMessage({ type: "GET_SETTINGS_SNAPSHOT" }, (snap) => {
     const mode = (snap?.contextMode ?? "selectionParagraph") as ContextMode;
     const maxChars = Number(snap?.maxContextChars) || 8000;
-    const ctx = gatherPageContext(mode, maxChars);
 
-    const preview = shadow.getElementById("pw-preview");
-    if (preview) {
-      preview.textContent = `Context: ${ctx.contextChars} characters from “${ctx.pageTitle.slice(0, 80)}${ctx.pageTitle.length > 80 ? "…" : ""}”${ctx.truncated ? " (truncated to your max length)" : ""}`;
-    }
-
-    const warn = shadow.getElementById("pw-warn");
-    if (warn && ctx.contextChars === 0) {
-      warn.hidden = false;
-      warn.textContent =
-        "No text selected — select a passage to give context, or just ask anything!";
-    }
+    renderContextPreview(shadow, mode, maxChars);
+    shadow.getElementById("pw-refresh-ctx")?.addEventListener("click", () => {
+      renderContextPreview(shadow, mode, maxChars);
+    });
 
     const mic = shadow.getElementById("pw-mic") as HTMLButtonElement | null;
     const typedSend = shadow.getElementById("pw-typed-send") as HTMLButtonElement | null;
@@ -414,13 +577,14 @@ function openPanel(): void {
       gatherPageContext(mode, maxChars);
 
     const runTyped = () => {
+      renderContextPreview(shadow, mode, maxChars);
       const question = ta?.value?.trim() ?? "";
       const pageContext = refreshContext();
       if (!question) {
-        setStatus("Type a question, or use the mic.");
+        setStatus("Ask something — or tap voice and let Sidney eavesdrop.");
         return;
       }
-      setStatus("Thinking\u2026");
+      setStatus("Sidney’s thinking\u2026");
       void chrome.runtime.sendMessage(
         { type: "PIPELINE_TYPED", question, pageContext },
         (res: { ok?: boolean; error?: string; text?: string; audioBase64?: string; transcript?: string }) => {
@@ -435,13 +599,16 @@ function openPanel(): void {
             showAnswerActions();
             tryAutoplayMp3(lastAudioB64, setStatus, () => { /* play button visible */ });
           } else {
-            setStatus("Done.");
+            setStatus("Done — answer’s on screen (no audio this time).");
           }
         }
       );
     };
 
     typedSend?.addEventListener("click", runTyped);
+    ta?.addEventListener("focus", () => {
+      renderContextPreview(shadow, mode, maxChars);
+    });
     ta?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runTyped();
     });
@@ -461,7 +628,7 @@ function openPanel(): void {
     copyBtn?.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(lastAnswer);
-        setStatus("Copied!");
+        setStatus("Stolen fair and square — it’s on your clipboard.");
       } catch {
         setStatus("Could not copy.");
       }
@@ -483,19 +650,20 @@ function openPanel(): void {
         recorder = new MediaRecorder(stream);
         recording = true;
         if (mic) {
-          mic.textContent = "⏹ Stop recording";
+          mic.textContent = "⏹ Stop — send to Sidney";
           mic.classList.add("recording");
           mic.classList.remove("primary");
         }
-        setStatus("Listening… tap stop when done.");
+        setStatus("Listening… cut Sidney off whenever.");
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) chunks.push(e.data);
         };
         recorder.onstop = async () => {
           recording = false;
           stream.getTracks().forEach((t) => t.stop());
+          renderContextPreview(shadow, mode, maxChars);
           if (mic) {
-            mic.textContent = "🎙 Ask with voice";
+            mic.textContent = "🎙 Roast this page (voice)";
             mic.classList.remove("recording");
             mic.classList.add("primary");
           }
@@ -505,7 +673,7 @@ function openPanel(): void {
           let binary = "";
           for (let i = 0; i < u8.length; i++) binary += String.fromCharCode(u8[i]);
           const audioBase64 = btoa(binary);
-          setStatus("Transcribing\u2026");
+          setStatus("Turning your rant into text\u2026");
           void chrome.runtime.sendMessage(
             { type: "PIPELINE_VOICE", audioBase64, pageContext },
             (res: { ok?: boolean; error?: string; text?: string; audioBase64?: string; transcript?: string }) => {
@@ -520,7 +688,7 @@ function openPanel(): void {
                 showAnswerActions();
                 tryAutoplayMp3(lastAudioB64, setStatus, () => { /* play button visible */ });
               } else {
-                setStatus("Done.");
+                setStatus("Done — answer’s on screen (no audio this time).");
               }
             }
           );

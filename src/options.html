@@ -5,111 +5,195 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PageWhisper — Options</title>
     <style>
+      :root {
+        --bg: #0c0c10;
+        --card: #14141a;
+        --border: #2e2e38;
+        --text: #f4f4f5;
+        --muted: #a1a1aa;
+        --accent: #818cf8;
+        --accent-dim: rgba(129, 140, 248, 0.15);
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background: radial-gradient(1200px 600px at 10% -10%, rgba(99, 102, 241, 0.18), transparent),
+          radial-gradient(800px 400px at 100% 0%, rgba(236, 72, 153, 0.08), transparent),
+          var(--bg);
+        line-height: 1.5;
+        padding: 40px 24px 64px;
+      }
+      .wrap {
         max-width: 520px;
-        margin: 32px auto;
-        padding: 0 20px 48px;
-        color: #18181b;
-        line-height: 1.45;
+        margin: 0 auto;
       }
-      h1 {
-        font-size: 22px;
-        margin: 0 0 8px;
-      }
-      .sub {
-        color: #52525b;
-        font-size: 14px;
+      .hero {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
         margin-bottom: 28px;
+      }
+      .mascot {
+        font-size: 48px;
+        line-height: 1;
+        filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.35));
+      }
+      .hero h1 {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0 0 6px;
+        background: linear-gradient(100deg, #f4f4f5, #a5b4fc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero .lead {
+        margin: 0;
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 46ch;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 16px;
+      }
+      section h2 {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+        margin: 0 0 14px;
       }
       label {
         display: block;
         font-weight: 600;
         font-size: 13px;
-        margin: 16px 0 6px;
+        margin: 14px 0 6px;
+      }
+      label:first-of-type {
+        margin-top: 0;
       }
       input[type="text"],
       input[type="password"],
       input[type="number"],
       select {
         width: 100%;
-        max-width: 420px;
-        padding: 8px 10px;
-        border: 1px solid #d4d4d8;
-        border-radius: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
         font: inherit;
-        box-sizing: border-box;
+        background: #0f0f14;
+        color: var(--text);
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-dim);
       }
       .hint {
         font-size: 12px;
-        color: #71717a;
-        margin-top: 4px;
+        color: var(--muted);
+        margin-top: 5px;
       }
-      button {
-        margin-top: 24px;
-        padding: 10px 18px;
+      .hint a {
+        color: var(--accent);
+      }
+      button#save {
+        margin-top: 20px;
+        padding: 11px 22px;
         border: none;
-        border-radius: 8px;
-        background: #6366f1;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
         color: #fff;
         font-size: 14px;
+        font-weight: 600;
         cursor: pointer;
+        box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
       }
-      button:hover {
-        filter: brightness(1.06);
+      button#save:hover {
+        filter: brightness(1.08);
       }
       #saved {
         margin-left: 12px;
         font-size: 14px;
-        color: #16a34a;
+        color: #86efac;
       }
-      .box {
-        background: #fafafa;
-        border: 1px solid #e4e4e7;
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-top: 20px;
-        font-size: 13px;
-        color: #3f3f46;
+      .fine-print {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+      .fine-print strong {
+        color: #e4e4e7;
       }
     </style>
   </head>
   <body>
-    <h1>PageWhisper</h1>
-    <p class="sub">
-      Keys are stored in this browser profile (<code>chrome.storage.local</code>), like CodeWhisper’s
-      VS Code settings — not synced to our servers.
-    </p>
+    <div class="wrap">
+      <header class="hero">
+        <span class="mascot" aria-hidden="true">🐙</span>
+        <div>
+          <h1>PageWhisper</h1>
+          <p class="lead">
+            Sidney lives in your toolbar. Feed this page keys once, then highlight text anywhere and ask rude,
+            insightful questions — Groq answers, ElevenLabs reads them aloud. Zero servers on our side.
+          </p>
+        </div>
+      </header>
 
-    <label for="groq">Groq API key</label>
-    <input id="groq" type="password" autocomplete="off" placeholder="gsk_…" />
-    <p class="hint">From <a href="https://console.groq.com" target="_blank" rel="noreferrer">console.groq.com</a></p>
+      <section aria-labelledby="sec-keys">
+        <h2 id="sec-keys">API keys</h2>
+        <label for="groq">Groq API key</label>
+        <input id="groq" type="password" autocomplete="off" placeholder="gsk_…" />
+        <p class="hint">Grab one at <a href="https://console.groq.com" target="_blank" rel="noreferrer">console.groq.com</a> — fast inference for the chat bit.</p>
 
-    <label for="el">ElevenLabs API key</label>
-    <input id="el" type="password" autocomplete="off" />
-    <p class="hint">Header <code>xi-api-key</code> from ElevenLabs.</p>
+        <label for="el">ElevenLabs API key</label>
+        <input id="el" type="password" autocomplete="off" placeholder="xi-api-key" />
+        <p class="hint">Your <code style="color: var(--accent)">xi-api-key</code> from ElevenLabs (voice in + voice out).</p>
 
-    <label for="voice">ElevenLabs voice ID</label>
-    <input id="voice" type="text" autocomplete="off" placeholder="Voice library ID" />
+        <label for="voice">ElevenLabs voice ID</label>
+        <input id="voice" type="text" autocomplete="off" placeholder="From Voice Library" />
+        <p class="hint">Paste the voice ID you like — Sidney doesn’t judge, but your ears might.</p>
+      </section>
 
-    <label for="max">Max context characters</label>
-    <input id="max" type="number" min="500" max="50000" step="100" />
-    <p class="hint">Long selections are truncated before sending to Groq.</p>
+      <section aria-labelledby="sec-reading">
+        <h2 id="sec-reading">Reading the page</h2>
+        <label for="max">Max context characters</label>
+        <input id="max" type="number" min="500" max="50000" step="100" />
+        <p class="hint">Long highlights get trimmed before Groq sees them — keeps answers snappy and bills lower.</p>
 
-    <label for="mode">Context mode</label>
-    <select id="mode">
-      <option value="selection">Selection only</option>
-      <option value="selectionParagraph">Expand to containing paragraph / block</option>
-    </select>
-    <p class="hint">“Expand” walks up from your selection to a block element (paragraph, list item, etc.).</p>
+        <label for="mode">Context mode</label>
+        <select id="mode">
+          <option value="selection">Selection only — exactly what you highlighted</option>
+          <option value="selectionParagraph">Expand — whole paragraph / block around the highlight</option>
+        </select>
+        <p class="hint">
+          “Expand” walks outward to a sensible block (paragraph, list item, etc.) so Sidney gets full sentences,
+          not half a clause.
+        </p>
+      </section>
 
-    <button type="button" id="save">Save</button>
-    <span id="saved" hidden>Saved.</span>
+      <button type="button" id="save">Save settings</button>
+      <span id="saved" hidden>Saved — Sidney remembers.</span>
 
-    <div class="box">
-      <strong>Permissions</strong><br />
-      Microphone is used when you record in the page panel (HTTPS pages only). The extension reads
-      <strong>selected text</strong> you choose on the page. Requests go directly to Groq and ElevenLabs using the keys above.
+      <p class="fine-print">
+        <strong>Privacy.</strong> Keys sit in <code style="font-size: 11px">chrome.storage.local</code> in this browser profile (same vibe as VS Code workspace settings).
+        When you ask a question, your browser talks straight to Groq and ElevenLabs — nothing passes through us.
+        Mic works on HTTPS pages only; the extension only reads text you actually select.
+      </p>
     </div>
 
     <script src="options.js"></script>
