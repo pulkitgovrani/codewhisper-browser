@@ -1,5 +1,12 @@
 /** Match codewhisper backend: scribe_v2 + eleven_flash_v2_5 */
 
+const TTS_OUTPUT_FORMAT = "mp3_44100_128";
+
+function firstBytesHex(buf: ArrayBuffer, maxBytes: number): string {
+  const u8 = new Uint8Array(buf.byteLength === 0 ? buf : buf.slice(0, maxBytes));
+  return Array.from(u8, (b) => b.toString(16).padStart(2, "0")).join(" ");
+}
+
 export async function transcribeAudio(
   audioBytes: Uint8Array,
   apiKey: string
@@ -47,7 +54,7 @@ export async function synthesizeSpeech(
   const url = new URL(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`
   );
-  url.searchParams.set("output_format", "mp3_44100_128");
+  url.searchParams.set("output_format", TTS_OUTPUT_FORMAT);
 
   const resp = await fetch(url.toString(), {
     method: "POST",
@@ -62,6 +69,8 @@ export async function synthesizeSpeech(
     }),
   });
 
+  const contentType = resp.headers.get("content-type") ?? "";
+
   if (!resp.ok) {
     const errText = await resp.text();
     throw new Error(`ElevenLabs TTS ${resp.status}: ${errText.slice(0, 200)}`);
@@ -71,6 +80,11 @@ export async function synthesizeSpeech(
   if (buf.byteLength < 32) {
     throw new Error("ElevenLabs TTS returned an empty or invalid audio response.");
   }
+
+  console.debug(
+    `[PageWhisper SW] ElevenLabs TTS: output_format=${TTS_OUTPUT_FORMAT}, content-type=${contentType || "(none)"}, bytes=${buf.byteLength}, head=${firstBytesHex(buf, 16)}`
+  );
+
   const head = new Uint8Array(buf)[0];
   if (head === 0x7b) {
     try {
@@ -89,7 +103,7 @@ export async function synthesizeSpeech(
   }
   if (!looksLikeMp3Bytes(buf)) {
     throw new Error(
-      "ElevenLabs TTS response does not look like MP3 (unexpected format). Check voice ID and API key."
+      `ElevenLabs TTS response does not look like MP3 (content-type=${contentType || "unknown"}, output_format=${TTS_OUTPUT_FORMAT}, head=${firstBytesHex(buf, 8)}). Check voice ID and API key.`
     );
   }
 

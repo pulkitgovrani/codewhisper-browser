@@ -24,6 +24,16 @@ function bytesToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
+/** Filter console to "PageWhisper SW" when debugging playback / truncation. */
+function debugLogPipelineTts(buf: ArrayBuffer): void {
+  const slice = buf.byteLength === 0 ? buf : buf.slice(0, Math.min(16, buf.byteLength));
+  const u8 = new Uint8Array(slice);
+  const hex = Array.from(u8, (b) => b.toString(16).padStart(2, "0")).join(" ");
+  console.debug(
+    `[PageWhisper SW] pipeline TTS after synthesizeSpeech: bytes=${buf.byteLength}, first16=${hex}`
+  );
+}
+
 interface PipelineVoice {
   type: "PIPELINE_VOICE";
   audioBase64: string;
@@ -74,11 +84,14 @@ async function handlePipeline(msg: ExtMsg): Promise<Record<string, unknown>> {
       s.maxContextChars
     );
     const audioBuf = await synthesizeSpeech(answer, elKey, voiceId);
+    debugLogPipelineTts(audioBuf);
+    const audioBase64 = bytesToBase64(audioBuf);
+    console.debug(`[PageWhisper SW] pipeline audioBase64.length=${audioBase64.length}`);
     return {
       ok: true,
       transcript,
       text: answer,
-      audioBase64: bytesToBase64(audioBuf),
+      audioBase64,
       contextChars: msg.pageContext.contextChars,
       truncated: msg.pageContext.truncated,
     };

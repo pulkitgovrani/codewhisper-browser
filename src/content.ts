@@ -63,19 +63,111 @@ function removePanel(): void {
   document.getElementById(PANEL_HOST_ID)?.remove();
 }
 
-let playbackObjectUrl: string | null = null;
-let currentPlaybackAudio: HTMLAudioElement | null = null;
+/** Web Audio path avoids Chromium blocking <audio src="blob:…"> in extension content scripts ("URL safety check"). */
+let sharedAudioContext: AudioContext | null = null;
+let playbackSourceNode: AudioBufferSourceNode | null = null;
+
+function getAudioContextCtor(): typeof AudioContext {
+  const w = window as Window & { webkitAudioContext?: typeof AudioContext };
+  const Ctor = window.AudioContext ?? w.webkitAudioContext;
+  if (!Ctor) {
+    throw new Error("Web Audio API not available in this context.");
+  }
+  return Ctor;
+}
+
+function getOrCreateAudioContext(): AudioContext {
+  if (sharedAudioContext && sharedAudioContext.state !== "closed") {
+    return sharedAudioContext;
+  }
+  const Ctor = getAudioContextCtor();
+  sharedAudioContext = new Ctor();
+  return sharedAudioContext;
+}
 
 function revokePlayback(): void {
   try {
-    currentPlaybackAudio?.pause();
+    playbackSourceNode?.stop();
+  } catch {
+    /* already stopped */
+  }
+  try {
+    playbackSourceNode?.disconnect();
   } catch {
     /* ignore */
   }
-  currentPlaybackAudio = null;
-  if (playbackObjectUrl) {
-    URL.revokeObjectURL(playbackObjectUrl);
-    playbackObjectUrl = null;
+  playbackSourceNode = null;
+}
+
+function describeErr(err: unknown): string {
+  if (err instanceof DOMException || err instanceof Error) {
+    return err.name ? `${err.name}: ${err.message}` : err.message;
+  }
+  return String(err);
+}
+
+/**
+ * Decode MP3 bytes and play via Web Audio (no blob: URLs — avoids MEDIA_ERR_SRC_NOT_SUPPORTED / URL safety check).
+ */
+async function playMp3WebAudio(
+  mp3Bytes: Uint8Array,
+  opts: {
+    onStatus: (s: string) => void;
+    expectUserGesture?: boolean;
+    onAutoplayBlocked?: () => void;
+  }
+): Promise<void> {
+  revokePlayback();
+  let ctx: AudioContext;
+  try {
+    ctx = getOrCreateAudioContext();
+  } catch (e) {
+    opts.onStatus(`Playback failed: ${describeErr(e)}`);
+    return;
+  }
+
+  try {
+    await ctx.resume();
+  } catch (e) {
+    if (!opts.expectUserGesture) {
+      opts.onAutoplayBlocked?.();
+      return;
+    }
+    opts.onStatus(`Playback failed: ${describeErr(e)}`);
+    return;
+  }
+
+  if (!opts.expectUserGesture && ctx.state !== "running") {
+    opts.onAutoplayBlocked?.();
+    return;
+  }
+
+  const ab = mp3Bytes.buffer.slice(
+    mp3Bytes.byteOffset,
+    mp3Bytes.byteOffset + mp3Bytes.byteLength
+  );
+  let audioBuffer: AudioBuffer;
+  try {
+    audioBuffer = await ctx.decodeAudioData(ab);
+  } catch (e) {
+    opts.onStatus(`Playback failed: ${describeErr(e)}`);
+    console.warn("[PageWhisper] decodeAudioData failed", e);
+    return;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(ctx.destination);
+  playbackSourceNode = src;
+  src.onended = () => {
+    playbackSourceNode = null;
+  };
+  try {
+    src.start();
+    opts.onStatus("Playing answer…");
+  } catch (e) {
+    playbackSourceNode = null;
+    opts.onStatus(`Playback failed: ${describeErr(e)}`);
   }
 }
 
@@ -88,56 +180,30 @@ function tryAutoplayMp3(
   onStatus: (s: string) => void,
   onNeedUserTap: () => void
 ): void {
-  revokePlayback();
   const bytes = base64ToBytes(b64);
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
-  const blob = new Blob([copy], { type: "audio/mpeg" });
-  playbackObjectUrl = URL.createObjectURL(blob);
-  const audio = new Audio(playbackObjectUrl);
-  currentPlaybackAudio = audio;
-  audio.addEventListener("ended", () => revokePlayback());
-  audio.load();
-  void audio
-    .play()
-    .then(() => {
-      onStatus("Playing answer…");
-    })
-    .catch((err: unknown) => {
-      const name = err instanceof DOMException ? err.name : "";
-      if (name === "NotAllowedError" || name === "AbortError") {
-        onStatus(
-          'Tap "Play answer" to hear (browser blocked automatic playback).'
-        );
-      } else {
-        const msg = err instanceof Error ? err.message : String(err);
-        onStatus(`Could not start playback: ${msg}`);
-      }
+  void playMp3WebAudio(copy, {
+    onStatus,
+    expectUserGesture: false,
+    onAutoplayBlocked: () => {
+      onStatus(
+        'Tap "Play answer" to hear (browser blocked automatic playback).'
+      );
       onNeedUserTap();
-    });
+    },
+  });
 }
 
 /** User clicked "Play answer" / "Replay" — fresh gesture, should succeed. */
 function playMp3UserGesture(b64: string, onStatus: (s: string) => void): void {
-  revokePlayback();
   const bytes = base64ToBytes(b64);
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
-  const blob = new Blob([copy], { type: "audio/mpeg" });
-  playbackObjectUrl = URL.createObjectURL(blob);
-  const audio = new Audio(playbackObjectUrl);
-  currentPlaybackAudio = audio;
-  audio.addEventListener("ended", () => revokePlayback());
-  audio.load();
-  void audio
-    .play()
-    .then(() => {
-      onStatus("Playing answer…");
-    })
-    .catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      onStatus(`Playback failed: ${msg}`);
-    });
+  void playMp3WebAudio(copy, {
+    onStatus,
+    expectUserGesture: true,
+  });
 }
 
 function openPanel(): void {
