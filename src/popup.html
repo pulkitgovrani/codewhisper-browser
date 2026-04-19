@@ -13,10 +13,24 @@
         background: #18181b;
         color: #fafafa;
       }
+      .popup-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .popup-brand img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+      }
       h1 {
         font-size: 15px;
-        margin: 0 0 10px;
+        margin: 0;
         font-weight: 600;
+        letter-spacing: -0.02em;
       }
       p {
         font-size: 12px;
@@ -49,7 +63,10 @@
     </style>
   </head>
   <body>
-    <h1>PageWhisper</h1>
+    <div class="popup-brand">
+      <img src="icons/icon48.png" width="36" height="36" alt="Sydney mascot" />
+      <h1>PageWhisper</h1>
+    </div>
     <p>Select text on the page, then open the panel to ask by voice or typing.</p>
     <button type="button" id="open-panel">Open panel on this page</button>
     <button type="button" id="open-options" class="secondary">API keys & options</button>

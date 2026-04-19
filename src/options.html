@@ -38,10 +38,13 @@
         align-items: flex-start;
         margin-bottom: 28px;
       }
-      .mascot {
-        font-size: 48px;
-        line-height: 1;
-        filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.35));
+      .mascot-hero {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        flex-shrink: 0;
+        box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+        object-fit: cover;
       }
       .hero h1 {
         font-size: 26px;
@@ -144,11 +147,17 @@
   <body>
     <div class="wrap">
       <header class="hero">
-        <span class="mascot" aria-hidden="true">🐙</span>
+        <img
+          class="mascot-hero"
+          src="icons/icon128.png"
+          width="56"
+          height="56"
+          alt="Sydney, PageWhisper mascot"
+        />
         <div>
           <h1>PageWhisper</h1>
           <p class="lead">
-            Sidney lives in your toolbar. Feed this page keys once, then highlight text anywhere and ask rude,
+            Sydney lives in your toolbar. Feed this page keys once, then highlight text anywhere and ask rude,
             insightful questions — Groq answers, ElevenLabs reads them aloud. Zero servers on our side.
           </p>
         </div>
@@ -166,7 +175,7 @@
 
         <label for="voice">ElevenLabs voice ID</label>
         <input id="voice" type="text" autocomplete="off" placeholder="From Voice Library" />
-        <p class="hint">Paste the voice ID you like — Sidney doesn’t judge, but your ears might.</p>
+        <p class="hint">Paste the voice ID you like — Sydney doesn’t judge, but your ears might.</p>
       </section>
 
       <section aria-labelledby="sec-reading">
@@ -187,7 +196,7 @@
       </section>
 
       <button type="button" id="save">Save settings</button>
-      <span id="saved" hidden>Saved — Sidney remembers.</span>
+      <span id="saved" hidden>Saved — Sydney remembers.</span>
 
       <p class="fine-print">
         <strong>Privacy.</strong> Keys sit in <code style="font-size: 11px">chrome.storage.local</code> in this browser profile (same vibe as VS Code workspace settings).

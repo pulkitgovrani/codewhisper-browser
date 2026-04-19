@@ -352,11 +352,15 @@ function openPanel(): void {
     gap: 10px;
     margin-bottom: 12px;
   }
-  .mascot {
-    font-size: 34px;
-    line-height: 1;
-    filter: drop-shadow(0 2px 8px rgba(99,102,241,.35));
+  .mascot-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    object-fit: contain;
     user-select: none;
+    pointer-events: none;
   }
   .brand-text { flex: 1; min-width: 0; }
   .title {
@@ -535,10 +539,10 @@ function openPanel(): void {
 </style>
 <div class="card">
   <div class="head-row">
-    <span class="mascot" title="Sidney, your page-reading octopus">🐙</span>
+    <img class="mascot-img" id="pw-mascot-icon" src="" width="44" height="44" alt="" />
     <div class="brand-text">
       <h2 class="title">PageWhisper</h2>
-      <p class="tagline">Sidney read the tab so you don’t have to pretend you did.</p>
+      <p class="tagline">Sydney the owl read the tab so you don’t have to pretend you did.</p>
     </div>
     <button class="x" type="button" id="pw-close" aria-label="Close panel">×</button>
   </div>
@@ -560,7 +564,7 @@ function openPanel(): void {
   <textarea id="pw-q" placeholder="What’s this paragraph trying to say? Why should I care?"></textarea>
   <p class="hint">⌘/Ctrl + Enter to send · Change “context mode” in extension options</p>
   <div class="ask-row">
-    <button type="button" class="btn primary" id="pw-typed-send" style="flex:1">Ask Sidney</button>
+    <button type="button" class="btn primary" id="pw-typed-send" style="flex:1">Ask Sydney</button>
   </div>
   <div id="pw-status" class="muted" style="margin-top:8px;min-height:1.2em"></div>
   <div class="out" id="pw-out" hidden>
@@ -574,6 +578,13 @@ function openPanel(): void {
   </div>
 </div>`;
   shadow.appendChild(wrap);
+
+  const mascotImg = shadow.getElementById("pw-mascot-icon") as HTMLImageElement | null;
+  if (mascotImg && typeof chrome.runtime?.getURL === "function") {
+    mascotImg.src = chrome.runtime.getURL("icons/icon48.png");
+    mascotImg.alt = "Sydney — PageWhisper mascot";
+    mascotImg.title = "Sydney — PageWhisper mascot";
+  }
 
   void chrome.runtime.sendMessage({ type: "GET_SETTINGS_SNAPSHOT" }, (snap) => {
     const mode = (snap?.contextMode ?? "selectionParagraph") as ContextMode;
@@ -641,10 +652,10 @@ function openPanel(): void {
       const question = ta?.value?.trim() ?? "";
       const pageContext = refreshContext();
       if (!question) {
-        setStatus("Ask something — or tap voice and let Sidney eavesdrop.");
+        setStatus("Ask something — or tap voice and let Sydney eavesdrop.");
         return;
       }
-      setStatus("Sidney’s thinking\u2026");
+      setStatus("Sydney’s thinking\u2026");
       void chrome.runtime.sendMessage(
         { type: "PIPELINE_TYPED", question, pageContext },
         (res: { ok?: boolean; error?: string; text?: string; audioBase64?: string; transcript?: string }) => {
@@ -709,11 +720,11 @@ function openPanel(): void {
         recorder = new MediaRecorder(stream);
         recording = true;
         if (mic) {
-          mic.textContent = "⏹ Stop — send to Sidney";
+          mic.textContent = "⏹ Stop — send to Sydney";
           mic.classList.add("recording");
           mic.classList.remove("primary");
         }
-        setStatus("Listening… cut Sidney off whenever.");
+        setStatus("Listening… cut Sydney off whenever.");
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) chunks.push(e.data);
         };
