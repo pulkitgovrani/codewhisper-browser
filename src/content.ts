@@ -161,15 +161,15 @@ function openPanel(): void {
 <style>
   * { box-sizing: border-box; }
   .card {
-    width: min(380px, calc(100vw - 32px));
-    max-height: min(480px, calc(100vh - 32px));
+    width: min(400px, calc(100vw - 32px));
+    max-height: min(540px, calc(100vh - 32px));
     overflow: auto;
-    background: #141418;
+    background: #0f0f13;
     color: #f4f4f5;
-    border: 1px solid #27272a;
-    border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.45);
-    padding: 14px 16px;
+    border: 1px solid #2a2a35;
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0,0,0,.6);
+    padding: 16px 18px;
   }
   h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
   .muted { color: #a1a1aa; font-size: 12px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
@@ -183,14 +183,39 @@ function openPanel(): void {
     padding: 8px 12px;
     cursor: pointer;
     font-size: 13px;
+    transition: background 0.15s;
   }
   button:hover { background: #52525b; }
   button.primary { background: #6366f1; }
   button.primary:hover { background: #4f46e5; }
-  button.danger { background: #7f1d1d; }
+  button.danger { background: #dc2626; color: #fff; }
+  button.danger:hover { background: #b91c1c; }
+  #pw-mic {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.01em;
+  }
+  #pw-mic.recording {
+    background: #dc2626;
+    animation: pulse-ring 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); }
+    60%  { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  }
+  .mic-row { margin-bottom: 10px; }
+  .ask-row { display: flex; gap: 8px; }
   textarea {
     width: 100%;
-    min-height: 64px;
+    min-height: 56px;
     border-radius: 8px;
     border: 1px solid #3f3f46;
     background: #18181b;
@@ -199,30 +224,73 @@ function openPanel(): void {
     font: inherit;
     resize: vertical;
     margin-bottom: 8px;
+    transition: border-color 0.15s;
   }
-  .out { font-size: 13px; line-height: 1.45; white-space: pre-wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid #27272a; }
+  textarea:focus { outline: none; border-color: #6366f1; }
+  .out {
+    font-size: 13px;
+    line-height: 1.55;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #2a2a35;
+  }
+  .transcript-line {
+    color: #71717a;
+    font-size: 11px;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  .answer-block {
+    color: #f4f4f5;
+    font-size: 13.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .answer-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
   .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #71717a; margin-bottom: 4px; }
   .x { margin-left: auto; background: transparent; color: #a1a1aa; font-size: 18px; line-height: 1; padding: 4px 8px; }
+  .dots::after {
+    content: '';
+    animation: dots 1.2s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0%   { content: '.'; }
+    33%  { content: '..'; }
+    66%  { content: '...'; }
+    100% { content: ''; }
+  }
 </style>
 <div class="card">
   <div style="display:flex;align-items:flex-start;gap:8px">
-    <h2>PageWhisper</h2>
+    <h2>CodeWhisper</h2>
     <button class="x" type="button" id="pw-close" aria-label="Close">×</button>
   </div>
   <div class="muted" id="pw-preview"></div>
   <div class="warn" id="pw-warn" hidden></div>
-  <div class="row">
-    <button type="button" class="primary" id="pw-mic">Record question</button>
-    <button type="button" id="pw-typed-send">Ask (typed)</button>
-  </div>
-  <div class="row" id="pw-answer-actions" hidden>
-    <button type="button" class="primary" id="pw-play">Play answer</button>
-    <button type="button" id="pw-copy">Copy answer</button>
+  <div class="mic-row">
+    <button type="button" class="primary" id="pw-mic">🎙 Ask with voice</button>
   </div>
   <div class="label">Or type your question</div>
-  <textarea id="pw-q" placeholder="e.g. What does this paragraph mean?"></textarea>
-  <div id="pw-status" class="muted"></div>
-  <div class="out" id="pw-out" hidden></div>
+  <textarea id="pw-q" placeholder="e.g. What does this do?"></textarea>
+  <div class="ask-row">
+    <button type="button" id="pw-typed-send" style="flex:1">Ask</button>
+  </div>
+  <div id="pw-status" class="muted" style="margin-top:8px"></div>
+  <div class="out" id="pw-out" hidden>
+    <div class="transcript-line" id="pw-transcript"></div>
+    <div class="answer-block" id="pw-answer"></div>
+    <div class="answer-actions" id="pw-answer-actions" hidden>
+      <button type="button" class="primary" id="pw-play">▶ Play</button>
+      <button type="button" id="pw-copy">Copy</button>
+      <button type="button" id="pw-replay" hidden>↺ Replay</button>
+    </div>
+  </div>
 </div>`;
   shadow.appendChild(wrap);
 
@@ -248,10 +316,11 @@ function openPanel(): void {
     const ta = shadow.getElementById("pw-q") as HTMLTextAreaElement | null;
     const status = shadow.getElementById("pw-status");
     const out = shadow.getElementById("pw-out");
-    const answerActions = shadow.getElementById(
-      "pw-answer-actions"
-    ) as HTMLDivElement | null;
+    const answerActions = shadow.getElementById("pw-answer-actions") as HTMLDivElement | null;
+    const transcriptEl = shadow.getElementById("pw-transcript");
+    const answerEl = shadow.getElementById("pw-answer");
     const playBtn = shadow.getElementById("pw-play") as HTMLButtonElement | null;
+    const replayBtn = shadow.getElementById("pw-replay") as HTMLButtonElement | null;
     const copyBtn = shadow.getElementById("pw-copy") as HTMLButtonElement | null;
 
     let recording = false;
@@ -268,6 +337,13 @@ function openPanel(): void {
       if (answerActions) answerActions.hidden = false;
     };
 
+    const showAnswer = (transcript: string, text: string) => {
+      if (out) out.hidden = false;
+      if (transcriptEl) transcriptEl.textContent = `You asked: ${transcript}`;
+      if (answerEl) answerEl.textContent = text;
+      out?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+
     const refreshContext = (): PageContextPayload =>
       gatherPageContext(mode, maxChars);
 
@@ -279,16 +355,12 @@ function openPanel(): void {
         return;
       }
       if (!question) {
-        setStatus("Type a question, or use Record.");
+        setStatus("Type a question, or use the mic.");
         return;
       }
-      setStatus("Asking…");
+      setStatus("Thinking\u2026");
       void chrome.runtime.sendMessage(
-        {
-          type: "PIPELINE_TYPED",
-          question,
-          pageContext,
-        },
+        { type: "PIPELINE_TYPED", question, pageContext },
         (res: { ok?: boolean; error?: string; text?: string; audioBase64?: string; transcript?: string }) => {
           if (!res?.ok) {
             setStatus(res?.error ?? "Something went wrong.");
@@ -296,32 +368,38 @@ function openPanel(): void {
           }
           lastAudioB64 = res.audioBase64 ?? null;
           lastAnswer = res.text ?? "";
-          if (out) {
-            out.hidden = false;
-            out.textContent = `You said: ${res.transcript ?? question}\n\nAnswer:\n${res.text ?? ""}`;
-          }
+          showAnswer(res.transcript ?? question, lastAnswer);
           if (lastAudioB64) {
             showAnswerActions();
-            tryAutoplayMp3(lastAudioB64, setStatus, () => {
-              /* Play answer button already visible */
-            });
+            tryAutoplayMp3(lastAudioB64, setStatus, () => { /* play button visible */ });
           } else {
-            setStatus("Done. (no audio returned)");
+            setStatus("Done.");
           }
         }
       );
     };
 
     typedSend?.addEventListener("click", runTyped);
+    ta?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runTyped();
+    });
 
     playBtn?.addEventListener("click", () => {
+      if (lastAudioB64) {
+        playMp3UserGesture(lastAudioB64, setStatus);
+        if (replayBtn) replayBtn.hidden = false;
+        if (playBtn) playBtn.hidden = true;
+      }
+    });
+
+    replayBtn?.addEventListener("click", () => {
       if (lastAudioB64) playMp3UserGesture(lastAudioB64, setStatus);
     });
 
     copyBtn?.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(lastAnswer);
-        setStatus("Copied answer.");
+        setStatus("Copied!");
       } catch {
         setStatus("Could not copy.");
       }
@@ -346,22 +424,30 @@ function openPanel(): void {
         chunks = [];
         recorder = new MediaRecorder(stream);
         recording = true;
-        if (mic) mic.textContent = "Stop & send";
-        setStatus("Recording… click again to stop.");
+        if (mic) {
+          mic.textContent = "⏹ Stop recording";
+          mic.classList.add("recording");
+          mic.classList.remove("primary");
+        }
+        setStatus("Listening… tap stop when done.");
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) chunks.push(e.data);
         };
         recorder.onstop = async () => {
           recording = false;
           stream.getTracks().forEach((t) => t.stop());
-          if (mic) mic.textContent = "Record question";
+          if (mic) {
+            mic.textContent = "🎙 Ask with voice";
+            mic.classList.remove("recording");
+            mic.classList.add("primary");
+          }
           const blob = new Blob(chunks, { type: "audio/webm" });
           const buf = await blob.arrayBuffer();
           const u8 = new Uint8Array(buf);
           let binary = "";
           for (let i = 0; i < u8.length; i++) binary += String.fromCharCode(u8[i]);
           const audioBase64 = btoa(binary);
-          setStatus("Transcribing and answering…");
+          setStatus("Transcribing\u2026");
           void chrome.runtime.sendMessage(
             { type: "PIPELINE_VOICE", audioBase64, pageContext },
             (res: { ok?: boolean; error?: string; text?: string; audioBase64?: string; transcript?: string }) => {
@@ -371,17 +457,12 @@ function openPanel(): void {
               }
               lastAudioB64 = res.audioBase64 ?? null;
               lastAnswer = res.text ?? "";
-              if (out) {
-                out.hidden = false;
-                out.textContent = `You said: ${res.transcript ?? ""}\n\nAnswer:\n${res.text ?? ""}`;
-              }
+              showAnswer(res.transcript ?? "", lastAnswer);
               if (lastAudioB64) {
                 showAnswerActions();
-                tryAutoplayMp3(lastAudioB64, setStatus, () => {
-                  /* Play answer visible */
-                });
+                tryAutoplayMp3(lastAudioB64, setStatus, () => { /* play button visible */ });
               } else {
-                setStatus("Done. (no audio returned)");
+                setStatus("Done.");
               }
             }
           );
