@@ -1,0 +1,15 @@
+{
+  "name": "pagewhisper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Voice or typed Q&A about selected text on web pages — Groq + ElevenLabs.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageWhisper</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        padding: 12px 14px;
+        min-width: 260px;
+        background: #18181b;
+        color: #fafafa;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 10px;
+        font-weight: 600;
+      }
+      p {
+        font-size: 12px;
+        color: #a1a1aa;
+        margin: 0 0 12px;
+        line-height: 1.4;
+      }
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        background: #6366f1;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      button.secondary {
+        background: #3f3f46;
+        color: #fafafa;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      a {
+        color: #a5b4fc;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PageWhisper</h1>
+    <p>Select text on the page, then open the panel to ask by voice or typing.</p>
+    <button type="button" id="open-panel">Open panel on this page</button>
+    <button type="button" id="open-options" class="secondary">API keys & options</button>
+    <p style="margin-bottom: 0">
+      Shortcut: <kbd style="background: #27272a; padding: 2px 6px; border-radius: 4px">⌘⇧Y</kbd> (Mac) /
+      <kbd style="background: #27272a; padding: 2px 6px; border-radius: 4px">Ctrl+Shift+Y</kbd> (Win/Linux)
+    </p>
+    <script src="popup.js"></script>
+  </body>
+</html>
