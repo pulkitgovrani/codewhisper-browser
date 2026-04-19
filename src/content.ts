@@ -308,7 +308,7 @@ function openPanel(): void {
     if (warn && ctx.contextChars === 0) {
       warn.hidden = false;
       warn.textContent =
-        "No text selected — select a passage on the page, then ask your question.";
+        "No text selected — select a passage to give context, or just ask anything!";
     }
 
     const mic = shadow.getElementById("pw-mic") as HTMLButtonElement | null;
@@ -350,10 +350,6 @@ function openPanel(): void {
     const runTyped = () => {
       const question = ta?.value?.trim() ?? "";
       const pageContext = refreshContext();
-      if (pageContext.contextChars === 0) {
-        setStatus("Select text on the page first.");
-        return;
-      }
       if (!question) {
         setStatus("Type a question, or use the mic.");
         return;
@@ -415,10 +411,6 @@ function openPanel(): void {
         return;
       }
       const pageContext = refreshContext();
-      if (pageContext.contextChars === 0) {
-        setStatus("Select text on the page first.");
-        return;
-      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];

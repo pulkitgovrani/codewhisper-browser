@@ -8,8 +8,7 @@ export interface PageWhisperSettings {
   contextMode: ContextMode;
 }
 
-// ElevenLabs public voice library ID for "Elon Musk" community voice
-const ELON_VOICE_ID = "ThT5KcBeYPX3keUQqHPh";
+const ELON_VOICE_ID = "XwkIUwRxNu9PpezCu4Vg";
 
 export const DEFAULT_SETTINGS: PageWhisperSettings = {
   groqApiKey: "",
