@@ -5,8 +5,22 @@ import type { PageContextPayload } from "./types";
 
 function formatContextForGroq(ctx: PageContextPayload): string {
   const parts: string[] = [];
-  if (ctx.pageTitle.trim()) parts.push(`Page title: ${ctx.pageTitle.trim()}`);
-  if (ctx.contextBody.trim()) parts.push(`Text to discuss:\n${ctx.contextBody.trim()}`);
+  if (ctx.pageTitle.trim()) {
+    parts.push(`Page title (metadata only): ${ctx.pageTitle.trim()}`);
+  }
+  if (ctx.pageUrl.trim()) {
+    parts.push(`Page URL (metadata only): ${ctx.pageUrl.trim()}`);
+  }
+  const body = ctx.contextBody.trim();
+  if (body) {
+    parts.push(
+      "The user's current text selection / tightest wrapped block from the page is below. " +
+        "Answer ONLY from this excerpt (and the question). Do not describe the whole repository, folder, or site unless the excerpt itself requires it:\n\n" +
+        "---\n" +
+        body +
+        "\n---"
+    );
+  }
   return parts.join("\n\n");
 }
 

@@ -2,11 +2,79 @@ import type { ContextMode, PageContextPayload } from "./types";
 
 const PANEL_HOST_ID = "pagewhisper-root";
 
+let selectionChangeCleanup: (() => void) | null = null;
+
 function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+/**
+ * Expand mode used to grab the first matching ancestor `DIV`/`TD`/`MAIN`, which on GitHub/code UIs is often
+ * the whole file or repo body. We instead pick the *tightest* wrapper whose text still contains the highlight
+ * and isn’t absurdly large.
+ */
+function expandSelectionToTightBlock(sel: Selection, selText: string, maxChars: number): string {
+  if (!selText || !sel.rangeCount) return selText;
+  const range = sel.getRangeAt(0);
+  let node: Node | null = range.commonAncestorContainer;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+
+  const TIGHT = new Set([
+    "P",
+    "LI",
+    "BLOCKQUOTE",
+    "FIGCAPTION",
+    "DT",
+    "DD",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "PRE",
+    "CODE",
+    "CAPTION",
+    "TD",
+    "TH",
+  ]);
+  const MID = new Set(["ARTICLE", "SECTION", "ASIDE"]);
+  const LOOSE = new Set(["DIV", "MAIN", "NAV"]);
+
+  const needle = selText.slice(0, Math.min(selText.length, 400));
+  const MAX_BOX = Math.min(Math.max(maxChars * 4, 4000), 14_000);
+
+  const candidates: HTMLElement[] = [];
+  let el = node as HTMLElement | null;
+  while (el && el !== document.body) {
+    const tag = el.tagName;
+    if (TIGHT.has(tag) || MID.has(tag) || LOOSE.has(tag)) {
+      const t = el.innerText?.trim() ?? "";
+      if (t.length >= selText.length && (needle.length === 0 || t.includes(needle))) {
+        candidates.push(el);
+      }
+    }
+    el = el.parentElement;
+  }
+
+  if (candidates.length === 0) return selText;
+
+  let bestText = selText;
+  let bestLen = Infinity;
+  for (const c of candidates) {
+    const t = c.innerText?.trim() ?? "";
+    if (t.length > MAX_BOX) continue;
+    if (t.length < selText.length) continue;
+    if (t.length < bestLen) {
+      bestLen = t.length;
+      bestText = t;
+    }
+  }
+
+  return bestLen === Infinity ? selText : bestText;
 }
 
 function gatherPageContext(
@@ -16,34 +84,8 @@ function gatherPageContext(
   const sel = window.getSelection();
   let raw = (sel?.toString() ?? "").trim();
 
-  if (mode === "selectionParagraph" && sel && sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
-    let node: Node | null = range.commonAncestorContainer;
-    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
-    const blocks = new Set([
-      "P",
-      "DIV",
-      "ARTICLE",
-      "SECTION",
-      "LI",
-      "BLOCKQUOTE",
-      "TD",
-      "TH",
-      "MAIN",
-      "ASIDE",
-      "FIGCAPTION",
-    ]);
-    let el = node as HTMLElement | null;
-    while (el && el !== document.body) {
-      if (el.tagName && blocks.has(el.tagName)) {
-        const t = el.innerText?.trim() ?? "";
-        if (t.length > 0) {
-          raw = t;
-          break;
-        }
-      }
-      el = el.parentElement;
-    }
+  if (mode === "selectionParagraph" && sel && sel.rangeCount > 0 && raw) {
+    raw = expandSelectionToTightBlock(sel, raw, maxChars);
   }
 
   const truncated = raw.length > maxChars;
@@ -60,8 +102,8 @@ function gatherPageContext(
 
 function contextModeShortLabel(mode: ContextMode): string {
   return mode === "selectionParagraph"
-    ? "Whole block around highlight"
-    : "Highlighted text only";
+    ? "Expand: smallest block around highlight"
+    : "Exact selection only";
 }
 
 /** Updates the “what we’re sending” preview from the live page selection. */
@@ -124,6 +166,8 @@ function renderContextPreview(
 }
 
 function removePanel(): void {
+  selectionChangeCleanup?.();
+  selectionChangeCleanup = null;
   revokePlayback();
   document.getElementById(PANEL_HOST_ID)?.remove();
 }
@@ -540,6 +584,22 @@ function openPanel(): void {
       renderContextPreview(shadow, mode, maxChars);
     });
 
+    selectionChangeCleanup?.();
+    let previewDebounce: ReturnType<typeof setTimeout> | null = null;
+    const onDocSelectionChange = () => {
+      if (!document.getElementById(PANEL_HOST_ID)) return;
+      if (previewDebounce) clearTimeout(previewDebounce);
+      previewDebounce = setTimeout(() => {
+        renderContextPreview(shadow, mode, maxChars);
+        previewDebounce = null;
+      }, 100);
+    };
+    document.addEventListener("selectionchange", onDocSelectionChange);
+    selectionChangeCleanup = () => {
+      document.removeEventListener("selectionchange", onDocSelectionChange);
+      if (previewDebounce) clearTimeout(previewDebounce);
+    };
+
     const mic = shadow.getElementById("pw-mic") as HTMLButtonElement | null;
     const typedSend = shadow.getElementById("pw-typed-send") as HTMLButtonElement | null;
     const ta = shadow.getElementById("pw-q") as HTMLTextAreaElement | null;
@@ -643,7 +703,6 @@ function openPanel(): void {
         recorder.stop();
         return;
       }
-      const pageContext = refreshContext();
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
@@ -662,6 +721,7 @@ function openPanel(): void {
           recording = false;
           stream.getTracks().forEach((t) => t.stop());
           renderContextPreview(shadow, mode, maxChars);
+          const pageContext = gatherPageContext(mode, maxChars);
           if (mic) {
             mic.textContent = "🎙 Roast this page (voice)";
             mic.classList.remove("recording");

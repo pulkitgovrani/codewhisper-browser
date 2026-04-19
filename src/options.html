@@ -178,11 +178,11 @@
         <label for="mode">Context mode</label>
         <select id="mode">
           <option value="selection">Selection only — exactly what you highlighted</option>
-          <option value="selectionParagraph">Expand — whole paragraph / block around the highlight</option>
+          <option value="selectionParagraph">Expand — smallest surrounding block (not the whole page)</option>
         </select>
         <p class="hint">
-          “Expand” walks outward to a sensible block (paragraph, list item, etc.) so Sidney gets full sentences,
-          not half a clause.
+          Expand picks the <strong>tightest</strong> paragraph / cell / heading that still contains what you highlighted.
+          Huge containers (one giant table cell with a whole file) are skipped — you stay on your selection instead.
         </p>
       </section>
 
